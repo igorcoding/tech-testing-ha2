@@ -1,4 +1,5 @@
 import urlparse
+from selenium.webdriver.common.by import By
 from selenium.webdriver.support.wait import WebDriverWait
 
 WEB_DRIVER_DEFAULT_WAIT = 30
@@ -19,10 +20,23 @@ class Page(Component):
     BASE_URL = 'https://target.mail.ru'
     PATH = ''
 
+    @property
+    def top_menu(self):
+        return TopMenu(self.driver)
+
     def open(self):
         url = urlparse.urljoin(self.BASE_URL, self.PATH)
         self.driver.get(url)
 
 
-class RadioButtonComponent(Component):
-    RADIO_BUTTON_XPATH = ".//label[text() = '%s']/../input"
+class TopMenu(Component):
+    EMAIL = (By.CSS_SELECTOR, '#PH_user-email')
+
+    def get_email(self):
+        return WebDriverWait(self.driver, WEB_DRIVER_DEFAULT_WAIT, WEB_DRIVER_POLL_FREQ).until(
+            lambda d: d.find_element(*self.EMAIL).text
+        )
+
+
+class LabeledInputComponent(Component):
+    LABELED_INPUT_XPATH = ".//label[text() = '%s']/../input"

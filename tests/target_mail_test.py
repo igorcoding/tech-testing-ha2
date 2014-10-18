@@ -44,10 +44,13 @@ class TargetMailRuTest(unittest.TestCase):
         ad_page = self.target_main.login(self.username, self.domain, self.password)
         ad_page.wait_for_load()
 
-        ad_page.product_type.select_product(PRODUCT_TYPE)
-        ad_page.targeting_type.select_pad(PADS_TYPE)
+        ad_page.campaign_base_settings.set_campaign_name(CAMPAIGN_NAME)
+        ad_page.campaign_base_settings.set_product_type(PRODUCT_TYPE)
+        ad_page.campaign_base_settings.set_pad_type(PADS_TYPE)
         ad_page.banner_form.fill_banner(**BANNER_DATA)
 
+        ad_page.income_targeting.choose(INCOME_TARGETING)
+        ad_page.campaign_time.fill(FROM_DATE, TO_DATE)
 
         import time
         time.sleep(4)
