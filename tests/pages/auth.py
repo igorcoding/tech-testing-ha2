@@ -20,16 +20,20 @@ class AuthPage(Page):
         form.submit()
 
     def login(self, login, domain, pwd):
+        """
+
+        :param login:
+        :param domain:
+        :param pwd:
+        :return:
+        """
         self.fill_form(login, domain, pwd)
 
         create_page = CreateAdPage(self.driver)
         create_page.open()
+
         email = create_page.top_menu.get_email()
-
-        if email == login:
-            return create_page
-
-        return None
+        return email == login
 
 
 class AuthForm(Component):

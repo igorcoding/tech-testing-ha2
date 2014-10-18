@@ -15,6 +15,19 @@ class Component(object):
             lambda d: d.find_element(by, selector)
         )
 
+    def _find_visible_element(self, parent, selector):
+        if parent is None:
+            parent = self.driver
+        elems = parent.find_elements(*selector)
+        elem = None
+        for e in elems:
+            if e.is_displayed():
+                elem = e
+                break
+        if elem is None:
+            raise Exception("Couldn't find visible to user element")
+        return elem
+
 
 class Page(Component):
     BASE_URL = 'https://target.mail.ru'

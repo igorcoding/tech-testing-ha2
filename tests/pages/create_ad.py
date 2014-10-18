@@ -1,5 +1,8 @@
 # coding=utf-8
-from selenium.webdriver.common.by import By
+from datetime import datetime
+
+from selenium.webdriver.common.action_chains import ActionChains
+
 from tests.pages.common import *
 
 
@@ -9,6 +12,10 @@ class CreateAdPage(Page):
     PAGE_CONTENT = (By.CLASS_NAME, 'create-page')
     SUBMIT_CAMPAIGN_BUTTON = (By.CLASS_NAME, 'main-button__label')
 
+    def open(self):
+        super(CreateAdPage, self).open()
+        self.wait_for_load()
+
     @property
     def campaign_base_settings(self):
         return CampaignBaseSettings(self.driver)
@@ -16,6 +23,10 @@ class CreateAdPage(Page):
     @property
     def banner_form(self):
         return BannerForm(self.driver)
+
+    @property
+    def banner_preview(self):
+        return BannerPreview(self.driver)
 
     @property
     def income_targeting(self):
@@ -73,43 +84,28 @@ class PadType(LabeledInputComponent):
         radio_input.click()
 
 
-class BannerForm(Component):
-    BANNER_FORM = (By.CLASS_NAME, 'banner-form')
-    SAVE_BANNER_BUTTON = (By.CLASS_NAME, 'banner-form__save-button')
-    ADDED_BANNERS = (By.CSS_SELECTOR, '.added-banner__banners-wrapper>li')
-
+class BannerComponent(Component):
     URL_INPUT = (By.XPATH, ".//input[@type='text'][@data-name='url']")
     IMAGE_INPUT = (By.XPATH, ".//input[@type='file'][@data-name='image']")
 
+
+class BannerForm(BannerComponent):
+    SAVE_BANNER_BUTTON = (By.CLASS_NAME, 'banner-form__save-button')
+    BANNER_PREVIEW_IMG = (By.CLASS_NAME, "banner-preview__img")
+
     def __init__(self, driver):
         super(BannerForm, self).__init__(driver)
-        self.banner_form = self.driver.find_element(*self.BANNER_FORM)
-
-    def _find_visible_element(self, parent, selector):
-        if parent is None:
-            parent = self.driver
-        elems = parent.find_elements(*selector)
-        elem = None
-        for e in elems:
-            if e.is_displayed():
-                elem = e
-                break
-        if elem is None:
-            raise Exception("Couldn't find visible to user element")
-        return elem
 
     def set_url(self, url):
-        # url_input = self.driver.find_element(*self.URL_INPUT)
         url_input = self._find_visible_element(None, self.URL_INPUT)
         url_input.send_keys(url)
 
     def set_image(self, image_uri):
         img_input = self.driver.find_element(*self.IMAGE_INPUT)
-        # img_input = self._find_visible_element(None, self.IMAGE_INPUT)
         img_input.send_keys(image_uri)
 
         def banner_waiting(driver):
-            banners = driver.find_elements(By.CLASS_NAME, "banner-preview__img")
+            banners = driver.find_elements(*self.BANNER_PREVIEW_IMG)
             for b in banners:
                 if b.value_of_css_property("display") == 'block':
                     return b
@@ -121,17 +117,45 @@ class BannerForm(Component):
 
     def submit(self):
         self.driver.find_element(*self.SAVE_BANNER_BUTTON).click()
-        added_banners = WebDriverWait(self.driver, WEB_DRIVER_DEFAULT_WAIT, WEB_DRIVER_POLL_FREQ).until(
-            lambda d: d.find_elements(*self.ADDED_BANNERS)
-        )
-        if len(added_banners) == 1:
-            return added_banners[0]
-        return None
+        return BannerPreview(self.driver)
 
     def fill_banner(self, url, image_uri):
+        """
+        :return: Banner preview that is in added_banners section on page
+        :rtype: BannerPreview
+        """
         self.set_url(url)
         self.set_image(image_uri)
         return self.submit()
+
+
+class BannerPreview(BannerComponent):
+    ADDED_BANNERS = (By.CSS_SELECTOR, '.added-banner__banners-wrapper>li')
+    BANNER_FORM = (By.CSS_SELECTOR, '.banner-form.free-block')
+    PREVIEW_EDIT_BUTTON = (By.CSS_SELECTOR, '.added-banner__buttons-panel .added-banner__button_edit')
+
+    def __init__(self, driver):
+        super(BannerPreview, self).__init__(driver)
+        banners = WebDriverWait(self.driver, WEB_DRIVER_DEFAULT_WAIT, WEB_DRIVER_POLL_FREQ).until(
+            lambda d: d.find_elements(*self.ADDED_BANNERS)
+        )
+        if len(banners) == 1:
+            self.banner = banners[0]
+        else:
+            raise Exception('Count of banners is %d instead of 1 somehow' % len(banners))
+
+    def get_url(self):
+        edit_button = self.banner.find_element(*self.PREVIEW_EDIT_BUTTON)
+        builder = ActionChains(self.driver)
+        builder.move_to_element(self.banner).click(edit_button).perform()
+
+        # Waiting for banner preview form to popup
+        banner_form = WebDriverWait(self.driver, WEB_DRIVER_DEFAULT_WAIT, WEB_DRIVER_POLL_FREQ).until(
+            lambda b: b.find_element(*self.BANNER_FORM)
+        )
+
+        url_input = self._find_visible_element(banner_form, self.URL_INPUT)
+        return url_input.get_attribute('value')
 
 
 class TargetingComponent(Component):
@@ -143,28 +167,59 @@ class TargetingComponent(Component):
         if self.TARGETING_NAME == '':
             raise Exception('TARGETING_NAME not set')
 
+        self.settings_visible = False
+
     def _get_settng_header_selector(self):
         return By.XPATH, self.SETTING_HEADER_TEMPLATE % self.TARGETING_NAME
 
-    def unfold_settings(self):
-        header = self.driver.find_element(*self._get_settng_header_selector())
-        value_wrapper = header.find_element(By.XPATH, './../..')\
-                              .find_element(By.CLASS_NAME, 'campaign-setting__wrapper')
-        value = value_wrapper.find_element(By.CLASS_NAME, 'campaign-setting__value')
-        value.click()  # unfold the targeting list
+    def toggle_settings(self):
+        value, value_wrapper = self._get_value_and_wrapper()
 
-        return value_wrapper
+        value.click()  # toggle the targeting list
+        self.settings_visible = not self.settings_visible
+        return self
+
+    def _get_value_and_wrapper(self):
+        header = self.driver.find_element(*self._get_settng_header_selector())
+        value_wrapper = header.find_element(By.XPATH, './../..') \
+            .find_element(By.CLASS_NAME, 'campaign-setting__wrapper')
+        value = value_wrapper.find_element(By.CLASS_NAME, 'campaign-setting__value')
+
+        return value, value_wrapper
 
 
 class IncomeTargeting(TargetingComponent):
     TARGETING_NAME = 'Уровень дохода'
+    HEADER_SELECTED_TEXT = 'Выбран'
+
+    CHECKBOXES = (By.NAME, 'input')
+
+    def _get_content(self):
+        _, value_wrapper = self._get_value_and_wrapper()
+        content = value_wrapper.find_element(By.CSS_SELECTOR, '.campaign-setting__content .campaign-setting__detail')
+        return content
 
     def choose(self, income):
-        value_wrapper = self.unfold_settings()
-        content = value_wrapper.find_element(By.CSS_SELECTOR, '.campaign-setting__content .campaign-setting__detail')
+        content = self._get_content()
 
         checkbox_input = content.find_element(By.XPATH, LabeledInputComponent.LABELED_INPUT_XPATH % income)
         checkbox_input.click()
+
+    def check_chosen(self, incomes):
+        content = self._get_content()
+
+        not_chosen = []
+        for income in incomes:
+            checkbox_input = content.find_element(By.XPATH, LabeledInputComponent.LABELED_INPUT_XPATH % income)
+            if not checkbox_input.is_selected():
+                not_chosen.append(income)
+
+        all_chosen = len(not_chosen) == 0
+        return all_chosen, not_chosen
+
+    def get_header_text(self):
+        _, value_wrapper = self._get_value_and_wrapper()
+        return value_wrapper.find_element(By.CLASS_NAME, 'campaign-setting__value').text
 
 
 class CampaignTimeTargeting(TargetingComponent):
@@ -175,7 +230,6 @@ class CampaignTimeTargeting(TargetingComponent):
     DATE_FORMATTER = '%d.%m.%Y'
 
     def fill(self, from_date, to_date):
-
         """
 
         :param from_date:
@@ -184,14 +238,30 @@ class CampaignTimeTargeting(TargetingComponent):
          :type to_date: datetime.datetime
         """
 
-        self.unfold_settings()
-
         from_date = from_date.strftime(self.DATE_FORMATTER)
         to_date = to_date.strftime(self.DATE_FORMATTER)
 
         self.driver.find_element(*self.FROM_DATE).send_keys(from_date)
         self.driver.find_element(*self.TO_DATE).send_keys(to_date)
 
-#
+    def get_length_in_days(self):
+        _, value_wrapper = self._get_value_and_wrapper()
+
+        days_text = value_wrapper.find_element(By.CLASS_NAME, 'campaign-setting__value') \
+            .text.split()[0]  # getting only a number
+        return days_text
+
+    def get_dates(self):
+        """
+
+        :rtype: (datetime.datetime, datetime.datetime)
+        """
+
+        self.toggle_settings()
+        from_date = self.driver.find_element(*self.FROM_DATE).get_attribute('value')
+        to_date = self.driver.find_element(*self.TO_DATE).get_attribute('value')
+
+        return datetime.strptime(from_date, self.DATE_FORMATTER), datetime.strptime(to_date, self.DATE_FORMATTER)
+
 
 
