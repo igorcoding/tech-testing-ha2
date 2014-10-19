@@ -20,6 +20,7 @@ class CampaignsList(Component):
 
 class Campaign(Component):
     CAMPAIGN_ID = (By.CLASS_NAME, 'campaign-title__id')
+    CAMPAIGN_DELETE = (By.CSS_SELECTOR, 'span.control__preset_delete')
 
     def __init__(self, driver, campaign, campaign_name):
         super(Campaign, self).__init__(driver)
@@ -43,3 +44,7 @@ class Campaign(Component):
         edit_page.open()
         edit_page.wait_for_load()
         return edit_page
+
+    def delete(self):
+        delete_button = self.campaign.find_element(*self.CAMPAIGN_DELETE)
+        delete_button.click()

@@ -13,11 +13,14 @@ sys.path.insert(0, tests_dir)
 if __name__ == '__main__':
     suite = unittest.TestSuite((
         unittest.makeSuite(AdCreationTest),
-        # unittest.makeSuite(AdEditTest),
+        unittest.makeSuite(AdEditTest),
     ))
     begin_time = datetime.now()
     result = unittest.TextTestRunner(verbosity=3).run(suite)
     end_time = datetime.now()
 
-    print "Execution Time (min): %d" % (end_time - begin_time).minute
+    td = end_time - begin_time
+    minutes, seconds = td.seconds // 60 % 60, td.seconds
+
+    print "Execution Time : %d min = %d s" % (minutes, seconds)
     sys.exit(not result.wasSuccessful())

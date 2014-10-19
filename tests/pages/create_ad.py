@@ -2,7 +2,6 @@
 from datetime import datetime
 
 from selenium.webdriver.common.action_chains import ActionChains
-from selenium.webdriver.support import expected_conditions
 
 from tests.pages.common import *
 

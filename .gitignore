@@ -4,3 +4,4 @@
 .env/
 
 task.txt
+tests_runner.sh

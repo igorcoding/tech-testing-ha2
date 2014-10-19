@@ -12,20 +12,23 @@ class AdCreationTest(BasicTestCase):
 
     def setUp(self):
         super(AdCreationTest, self).setUp()
+        self.ad_page = self._create_page()
 
     def tearDown(self):
         super(AdCreationTest, self).tearDown()
+
+    def _create_page(self):
+        ad_page = CreateAdPage(self.driver)
+        self._fill_basic_settings(ad_page)
+        ad_page.banner_form.fill_banner(**BANNER_DATA)
+        return ad_page
 
     # @unittest.SkipTest
     def test_banner_preview(self):
         """
             Проверяет правильность данных в засабмиченном баннере
         """
-        ad_page = CreateAdPage(self.driver)
-        self._fill_basic_settings(ad_page)
-        ad_page.banner_form.fill_banner(**BANNER_DATA)
-
-        banner_preview = ad_page.banner_preview
+        banner_preview = self.ad_page.banner_preview
         url = banner_preview.get_url()
 
         self.assertEqual(BANNER_DATA['url'], url, "Entered url doesn't match the one in banner_preview")
@@ -35,11 +38,7 @@ class AdCreationTest(BasicTestCase):
         """
             Проверка того, что данные в income сохраняются при сворачивании списка настроек
         """
-        ad_page = CreateAdPage(self.driver)
-        self._fill_basic_settings(ad_page)
-        ad_page.banner_form.fill_banner(**BANNER_DATA)
-
-        income_setting = ad_page.income_targeting
+        income_setting = self.ad_page.income_targeting
         income_setting.toggle_settings()  # opening
         for income in INCOME_TARGETINGS:
             income_setting.choose(income)
@@ -56,11 +55,7 @@ class AdCreationTest(BasicTestCase):
         """
             Проверка того, что данные в Датах работы кампании сохраняются при сворачивании списка настроек
         """
-        ad_page = CreateAdPage(self.driver)
-        self._fill_basic_settings(ad_page)
-        ad_page.banner_form.fill_banner(**BANNER_DATA)
-
-        campaign_time = ad_page.campaign_time
+        campaign_time = self.ad_page.campaign_time
         campaign_time.toggle_settings()  # opening
         campaign_time.fill(FROM_DATE, TO_DATE)
 
@@ -75,11 +70,7 @@ class AdCreationTest(BasicTestCase):
         """
             Проверка того, что дельта между датами выставляется верная
         """
-        ad_page = CreateAdPage(self.driver)
-        self._fill_basic_settings(ad_page)
-        ad_page.banner_form.fill_banner(**BANNER_DATA)
-
-        campaign_time = ad_page.campaign_time
+        campaign_time = self.ad_page.campaign_time
         campaign_time.toggle_settings().fill(FROM_DATE, TO_DATE)
         campaign_time.toggle_settings()  # close dropdown
 
@@ -93,11 +84,7 @@ class AdCreationTest(BasicTestCase):
         """
             Проверяет обмен дат местами, в случае, если to_date < from_date
         """
-        ad_page = CreateAdPage(self.driver)
-        self._fill_basic_settings(ad_page)
-        ad_page.banner_form.fill_banner(**BANNER_DATA)
-
-        campaign_time = ad_page.campaign_time
+        campaign_time = self.ad_page.campaign_time
         campaign_time.toggle_settings().fill(TO_DATE, FROM_DATE)  # reversed direction
 
         from_date, to_date = campaign_time.get_dates()
@@ -107,18 +94,13 @@ class AdCreationTest(BasicTestCase):
 
     @unittest.SkipTest
     def test_BETA(self):
-        ad_page = CreateAdPage(self.driver)
-        self._fill_basic_settings(ad_page)
-
-        ad_page.banner_form.fill_banner(**BANNER_DATA)
-
-        income_setting = ad_page.income_targeting
+        income_setting = self.ad_page.income_targeting
         income_setting.toggle_settings()
         for income in INCOME_TARGETINGS:
             income_setting.choose(income)
 
-        ad_page.campaign_time.toggle_settings().fill(FROM_DATE, TO_DATE)
-        ad_page.submit_campaign()
+        self.ad_page.campaign_time.toggle_settings().fill(FROM_DATE, TO_DATE)
+        self.ad_page.submit_campaign()
 
         campaigns_page = CampaignsPage(self.driver)
         my_campaign_editor = campaigns_page.campaigns_list.get_campaign(CAMPAIGN_NAME).edit()

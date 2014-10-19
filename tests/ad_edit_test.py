@@ -1,5 +1,4 @@
 # coding=utf-8
-import unittest
 from tests.basic_testcase import BasicTestCase
 from tests.pages.campaigns import CampaignsPage
 from tests.pages.create_ad import CreateAdPage, IncomeTargeting
@@ -12,10 +11,12 @@ class AdEditTest(BasicTestCase):
     def setUp(self):
         super(AdEditTest, self).setUp()
         self._make_campaign()
+        campaigns_page = CampaignsPage(self.driver)
+        self.campaign_editor = campaigns_page.campaigns_list.get_campaign(CAMPAIGN_NAME).edit()
 
     def tearDown(self):
-        super(AdEditTest, self).tearDown()
         self._remove_campaign()
+        super(AdEditTest, self).tearDown()
 
     def _make_campaign(self):
         ad_page = CreateAdPage(self.driver)
@@ -32,17 +33,16 @@ class AdEditTest(BasicTestCase):
         ad_page.submit_campaign()
 
     def _remove_campaign(self):
-        pass
+        campaigns_page = CampaignsPage(self.driver)
+        campaigns_page.open()
+        campaigns_page.campaigns_list.get_campaign(CAMPAIGN_NAME).delete()
 
     # @unittest.SkipTest
     def test_campaign_name_correct(self):
         """
             Проверка правильности имени кампании
         """
-        campaigns_page = CampaignsPage(self.driver)
-        my_campaign_editor = campaigns_page.campaigns_list.get_campaign(CAMPAIGN_NAME).edit()
-
-        name = my_campaign_editor.base_settings.get_campaign_name()
+        name = self.campaign_editor.base_settings.get_campaign_name()
         self.assertEqual(CAMPAIGN_NAME, name)
 
     # @unittest.SkipTest
@@ -50,10 +50,7 @@ class AdEditTest(BasicTestCase):
         """
             Проверка правильности площадки
         """
-        campaigns_page = CampaignsPage(self.driver)
-        my_campaign_editor = campaigns_page.campaigns_list.get_campaign(CAMPAIGN_NAME).edit()
-
-        pad = my_campaign_editor.base_settings.get_pad()
+        pad = self.campaign_editor.base_settings.get_pad()
         self.assertEqual(PAD_TYPE, pad)
 
     # @unittest.SkipTest
@@ -61,10 +58,7 @@ class AdEditTest(BasicTestCase):
         """
             Проверка правильности данных в баннере
         """
-        campaigns_page = CampaignsPage(self.driver)
-        my_campaign_editor = campaigns_page.campaigns_list.get_campaign(CAMPAIGN_NAME).edit()
-
-        banner_preview = my_campaign_editor.banner_preview
+        banner_preview = self.campaign_editor.banner_preview
         url = banner_preview.get_url()
 
         self.assertIn(BANNER_DATA['url'], url, 'Seems like url is not correct')
@@ -74,10 +68,7 @@ class AdEditTest(BasicTestCase):
         """
             Проверяет то, что income был сохранен верно
         """
-        campaigns_page = CampaignsPage(self.driver)
-        my_campaign_editor = campaigns_page.campaigns_list.get_campaign(CAMPAIGN_NAME).edit()
-
-        income = my_campaign_editor.income_targeting
+        income = self.campaign_editor.income_targeting
         text = income.get_header_text()
 
         income.toggle_settings()
@@ -91,10 +82,7 @@ class AdEditTest(BasicTestCase):
         """
             Проверяет то, что даты работы кампании были сохранены верно
         """
-        campaigns_page = CampaignsPage(self.driver)
-        my_campaign_editor = campaigns_page.campaigns_list.get_campaign(CAMPAIGN_NAME).edit()
-
-        campaign_time = my_campaign_editor.campaign_time
+        campaign_time = self.campaign_editor.campaign_time
         campaign_time.toggle_settings()
 
         from_date, to_date = campaign_time.get_dates()
@@ -107,10 +95,7 @@ class AdEditTest(BasicTestCase):
         """
             Проверяет то, что разница между днями посчитана верно
         """
-        campaigns_page = CampaignsPage(self.driver)
-        my_campaign_editor = campaigns_page.campaigns_list.get_campaign(CAMPAIGN_NAME).edit()
-
-        campaign_time = my_campaign_editor.campaign_time
+        campaign_time = self.campaign_editor.campaign_time
         campaign_time.toggle_settings()
 
         delta = int(campaign_time.get_length_in_days())
