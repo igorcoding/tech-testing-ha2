@@ -11,14 +11,21 @@ class Component(object):
         self.driver = driver
 
     def wait_for_item_load(self, by, selector):
-        return WebDriverWait(self.driver, WEB_DRIVER_DEFAULT_WAIT, WEB_DRIVER_POLL_FREQ).until(
+        return self.wait_for_item_load_by_parent(self.driver, by, selector)
+
+    @staticmethod
+    def wait_for_item_load_by_parent(parent, by, selector):
+        return WebDriverWait(parent, WEB_DRIVER_DEFAULT_WAIT, WEB_DRIVER_POLL_FREQ).until(
             lambda d: d.find_element(by, selector)
         )
 
     def _find_visible_element(self, parent, selector):
         if parent is None:
             parent = self.driver
-        elems = parent.find_elements(*selector)
+
+        elems = WebDriverWait(parent, WEB_DRIVER_DEFAULT_WAIT, WEB_DRIVER_POLL_FREQ).until(
+            lambda p: p.find_elements(*selector)
+        )
         elem = None
         for e in elems:
             if e.is_displayed():

@@ -8,7 +8,7 @@ from tests.test_data import *
 
 class BasicTestCase(unittest.TestCase):
     def setUp(self):
-        browser = os.environ.get('TTHA2BROWSER', 'CHROME')
+        browser = os.environ.get('TTHA2BROWSER', 'FIREFOX')
 
         self.driver = Remote(
             command_executor='http://127.0.0.1:4444/wd/hub',
@@ -31,4 +31,4 @@ class BasicTestCase(unittest.TestCase):
         base_settings = ad_page.campaign_base_settings
         base_settings.set_campaign_name(CAMPAIGN_NAME)
         base_settings.set_product_type(PRODUCT_TYPE)
-        base_settings.set_pad_type(PADS_TYPE)
+        base_settings.set_pad_type(PAD_TYPE)
