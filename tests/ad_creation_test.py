@@ -91,33 +91,3 @@ class AdCreationTest(BasicTestCase):
 
         self.assertEqual(FROM_DATE, from_date, 'From date is incorrect')
         self.assertEqual(TO_DATE, to_date, 'To date is incorrect')
-
-    @unittest.SkipTest
-    def test_BETA(self):
-        income_setting = self.ad_page.income_targeting
-        income_setting.toggle_settings()
-        for income in INCOME_TARGETINGS:
-            income_setting.choose(income)
-
-        self.ad_page.campaign_time.toggle_settings().fill(FROM_DATE, TO_DATE)
-        self.ad_page.submit_campaign()
-
-        campaigns_page = CampaignsPage(self.driver)
-        my_campaign_editor = campaigns_page.campaigns_list.get_campaign(CAMPAIGN_NAME).edit()
-
-        income = my_campaign_editor.income_targeting
-        income.toggle_settings()
-        all_incomes_checked, not_checked = income.check_chosen(INCOME_TARGETINGS)
-        text = income.get_header_text()
-
-        campaign_time = my_campaign_editor.campaign_time
-        campaign_time.toggle_settings()
-        days = campaign_time.get_length_in_days()
-        from_date, to_date = campaign_time.get_dates()
-
-
-        import time
-        time.sleep(4)
-
-        pass
-
